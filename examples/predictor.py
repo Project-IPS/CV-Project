@@ -49,6 +49,10 @@ class CustomPredictor(BasePredictor):
         object_counter = {}  # Counting objects moving in one direction
         object_counter1 = {}  # Counting objects moving in the opposite direction
         line = [(450, 0), (450, 600)]  # Define your counting line
+        self.cnt_str=None
+        self.cnt_str1=None
+        self.inn=0
+        self.out=0
 
         """Streams real-time inference on camera feed and saves results to file."""
         if self.args.verbose:
