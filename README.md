@@ -51,7 +51,13 @@ cd CV-Project
 pip install -v -e .
 ```
 
-#### step 3: Run below bash snippet;
+#### step 3: Setup websocket server;
+```bash
+cd examples/server
+nodemon index.js
+```
+
+#### step 4: Run below bash snippet;
 
 ```bash
 python examples/track.py --yolo-model yolov8.pt --tracking-method deepocsort --source 0 --show
