@@ -1,0 +1,75 @@
+body, html {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Align items at the start of the page */
+}
+
+#app {
+    display: flex;
+    flex-direction: column; /* Stack children vertically */
+    align-items: center; /* Center-align children */
+    width: 80%; /* Use more of the page width */
+    max-width: 1200px; /* Maximum width to prevent overly wide layouts on large screens */
+    margin-top: 20px;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 8px; /* Soften the corners */
+}
+
+#counter, #image-display, #register {
+    width: 100%; /* Make these elements take full width of #app */
+    margin-top: 20px; /* Add some spacing between sections */
+}
+
+#counter h2, #image-display h2, #register h1 {
+    color: #333;
+    margin: 0 0 20px; /* Reduce bottom margin */
+}
+
+/* Image Display Improvements */
+#image-display {
+    text-align: center; /* Center-align the image section */
+}
+
+#image-display img {
+    max-width: 100%; /* Make the image responsive */
+    height: auto; /* Maintain aspect ratio */
+    margin-top: 10px; /* Add some space above the image */
+}
+
+/* Table Improvements */
+#register-table {
+    border-collapse: collapse;
+    width: 100%; /* Ensure the table uses the full available width */
+}
+
+#register-table, #register-table th, #register-table td {
+    border: 1px solid #ddd; /* Lighter border color */
+}
+
+#register-table th, #register-table td {
+    padding: 10px; /* Increase padding for better readability */
+    text-align: left; /* Align text to the left */
+}
+
+#register-table th {
+    background-color: #007bff; /* Change to a more vibrant header color */
+    color: white; /* White text for better contrast */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    body, html {
+        flex-direction: column; /* Stack vertically on smaller screens */
+        align-items: stretch; /* Stretch items to use the full width */
+    }
+
+    #app {
+        width: 95%; /* Allow a little more width on smaller screens */
+    }
+}
