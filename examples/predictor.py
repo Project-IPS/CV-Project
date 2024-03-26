@@ -9,12 +9,64 @@ from ultralytics.utils import LOGGER, colorstr, ops
 from ultralytics.utils.torch_utils import smart_inference_mode
 from collections import deque
 from ultralytics.engine.predictor import BasePredictor
+from ultralytics.solutions import heatmap
+from examples.HeatMaps import newHeatmap
+from datetime import datetime
+import pytz
+from examples.results import newResults
 
 
+import websocket
+import json
+from datetime import datetime
+
+import base64
+from io import BytesIO
 
 class CustomPredictor(BasePredictor):
 
     ## Subclass adds counter feature to BasePredictor
+
+    def write_results(self, idx, results, batch, time_in):
+        """Write inference results to a file or directory."""
+        p, im, _ = batch
+        log_string = ''
+        if len(im.shape) == 3:
+            im = im[None]  # expand for batch dim
+        if self.source_type.webcam or self.source_type.from_img or self.source_type.tensor:  # batch_size >= 1
+            log_string += f'{idx}: '
+            frame = self.dataset.count
+        else:
+            frame = getattr(self.dataset, 'frame', 0)
+        self.data_path = p
+        self.txt_path = str(self.save_dir / 'labels' / p.stem) + ('' if self.dataset.mode == 'image' else f'_{frame}')
+        log_string += '%gx%g ' % im.shape[2:]  # print string
+        result = results[idx]
+        log_string += result.verbose()
+
+        if self.args.save or self.args.show:  # Add bbox to image
+            plot_args = {
+                'line_width': self.args.line_width,
+                'boxes': self.args.show_boxes,
+                'conf': self.args.show_conf,
+                'labels': self.args.show_labels}
+
+            if not self.args.retina_masks:
+                plot_args['im_gpu'] = im[idx]
+
+            # if isinstance(result, newResults):
+            #     self.plotted_img = result.plot(time_in, **plot_args)
+            # else:
+            #     print("Unexpected result type:", type(result))
+            self.plotted_img = result.plot(time_in, **plot_args)
+        # Write
+        if self.args.save_txt:
+            result.save_txt(f'{self.txt_path}.txt', save_conf=self.args.save_conf)
+        if self.args.save_crop:
+            result.save_crop(save_dir=self.save_dir / 'crops',
+                             file_name=self.data_path.stem + ('' if self.dataset.mode == 'image' else f'_{frame}'))
+
+        return log_string
 
     def ccw(self, A, B, C):
         return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0])
@@ -43,8 +95,50 @@ class CustomPredictor(BasePredictor):
 
         return direction_str
 
+    def postprocess(self, preds, img, orig_imgs):
+        """Post-processes predictions for an image and returns them."""
+        return preds
+
+    # def send_count(ws_url, count):
+    #     ws = websocket.create_connection(ws_url)
+    #     data = json.dumps({'object_count': count})
+    #     ws.send(data)
+    #     ws.close()
+
+    def setup_websocket(self):
+        self.ws = websocket.WebSocket()
+        self.ws.connect("ws://localhost:9876/websocket")
+
+    def datetime_serializer(self, o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+        raise TypeError("Type not serializable")
+
+    def format_datetime(self, dt):
+        return dt.strftime('%Y-%m-%d %H:%M:%S') if dt else 'N/A'
+
+    def calculate_duration(self, time_in, time_out):
+        """Calculate the duration between time_in and time_out."""
+        # Check if both times are not None
+        if time_in and time_out:
+            # Calculate the duration
+            duration = time_out - time_in
+            # Format the duration in hours, minutes, and seconds
+            return str(duration)
+        return 'N/A'
+
+    def encode_img(self, img):
+        # Assuming `image_np` is your numpy.ndarray image
+        _, buffer = cv2.imencode('.jpg', img)  # Encode the image to a JPEG format
+
+        # Convert the buffer to a base64 string
+        encoded_string = base64.b64encode(buffer).decode()
+
+        return encoded_string
+
     @smart_inference_mode()
     def stream_inference(self, source=None, model=None, *args, **kwargs):
+        self.setup_websocket()
         data_deque = {}  # Tracking object centers
         object_counter = {}  # Counting objects moving in one direction
         object_counter1 = {}  # Counting objects moving in the opposite direction
@@ -53,6 +147,22 @@ class CustomPredictor(BasePredictor):
         self.cnt_str1=None
         self.inn=0
         self.out=0
+        ## init heatmap
+        heatmap_obj = newHeatmap()
+        heatmap_obj.set_args(colormap=cv2.COLORMAP_PARULA,
+                             imw=480,
+                             imh=640,
+                             view_img=False,
+                             shape="circle")
+
+        # Define the India time zone
+        india_time_zone = pytz.timezone('Asia/Kolkata')
+        # Initialize dictionaries to store the timestamp of crossing events
+        crossing_time_in = {}  # For 'West' direction crossings
+        crossing_time_out = {}  # For 'East' direction crossings
+
+        interval = 0 ## frames after which inference is sent to server
+
 
         """Streams real-time inference on camera feed and saves results to file."""
         if self.args.verbose:
@@ -95,10 +205,12 @@ class CustomPredictor(BasePredictor):
                 with profilers[2]:
                     if isinstance(self.model, AutoBackend):
                         self.results = self.postprocess(preds, im, im0s)
+
                     else:
                         self.results = self.model.postprocess(path, preds, im, im0s)
-
+                print(type(self.results[0]))
                 self.run_callbacks('on_predict_postprocess_end')
+                print(type(self.results[0]))
                 # Visualize, save, write results
                 n = len(im0s)
                 for i in range(n):
@@ -108,7 +220,6 @@ class CustomPredictor(BasePredictor):
                         'inference': profilers[1].dt * 1E3 / n,
                         'postprocess': profilers[2].dt * 1E3 / n}
                     p, im0 = path[i], None if self.source_type.tensor else im0s[i].copy()
-                    print(p)
                     p = Path(p)
                     #################################
                     self.count = len(self.results[i].boxes) ## number of objects in frame
@@ -116,6 +227,7 @@ class CustomPredictor(BasePredictor):
                                                 ##################Line Based Counter##############
 
                     pred_boxes = self.results[i].boxes
+
                     for d in reversed(pred_boxes):
                         xyxy = d.xyxy
                         x1 = xyxy[0][0]
@@ -128,6 +240,7 @@ class CustomPredictor(BasePredictor):
                         # create new buffer for new object
                         if id not in data_deque:
                             data_deque[id] = deque(maxlen=64)
+
 
                         data_deque[id].appendleft(center)
                         if len(data_deque[id]) >= 2:
@@ -147,16 +260,39 @@ class CustomPredictor(BasePredictor):
                                 if "West" in direction:
                                     if obj_name not in object_counter:
                                         object_counter[obj_name] = 1
+
                                     else:
                                         object_counter[obj_name] += 1
+
+                                    time_in = datetime.now(india_time_zone)
+                                    # Store the timestamp for this id (if it hasn't been stored already)
+
+
+                                    # Check if the ID exists in crossing_time_out
+                                    if id in crossing_time_out:
+                                        # If it exists, delete it from crossing_time_out
+                                        del crossing_time_out[id]
+
+                                    # Now, safely update crossing_time_in with the new time_in for this ID
+                                    crossing_time_in[id] = time_in
+
+
+
                                 elif "East" in direction:
                                     if obj_name not in object_counter1:
                                         object_counter1[obj_name] = 1
+
                                     else:
                                         object_counter1[obj_name] += 1
+
+                                    time_out = datetime.now(india_time_zone)
+                                    # Store the timestamp for this id (if it hasn't been stored already)
+                                    crossing_time_out[id] = time_out
+
+
                     ##
                     if self.args.verbose or self.args.save or self.args.save_txt or self.args.show:
-                        s += self.write_results(i, self.results, (p, im, im0))
+                        s += self.write_results(i, self.results, (p, im, im0), crossing_time_in)
                     ##
 
                     line = [(450, 0), (450, 600)]
@@ -195,6 +331,48 @@ class CustomPredictor(BasePredictor):
                     cv2.putText(self.plotted_img, Total_str, (300, 465), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255),
                                 2, 2)
 
+                    ################
+                    # heatmap infernece
+
+                    self.plotted_img = heatmap_obj.generate_heatmap(self.plotted_img, self.results)
+                    ###########
+                    ########websocket####
+
+                    interval = interval + 1
+
+                    data_to_send = {
+                        'inn': self.inn,
+                        'out': self.out,
+                        'total': self.inn - self.out,
+                        'entries': [
+                            {
+                                'id': object_id,
+                                'time_in': self.format_datetime(crossing_time_in.get(object_id)),
+                                'time_out': self.format_datetime(crossing_time_out.get(object_id)),
+                                'duration': self.calculate_duration(crossing_time_in.get(object_id),
+                                                               crossing_time_out.get(object_id))
+                            } for object_id in set(crossing_time_in) | set(crossing_time_out)
+                        ]
+                    }
+
+                    if interval == 15:
+                        encoded_image = self.encode_img(self.plotted_img)
+                        interval=0
+                    else:
+                        encoded_image = None  # Or keep the last sent image if necessary
+
+                    if encoded_image:
+                        data_to_send['image'] = encoded_image
+
+
+                    # Convert to JSON string
+                    data_json = json.dumps(data_to_send)
+
+                    # Send over WebSocket
+                    self.ws.send(data_json)
+
+                    #######################################################
+
                     if self.args.save or self.args.save_txt:
                         self.results[i].save_dir = self.save_dir.__str__()
                     if self.args.show and self.plotted_img is not None:
@@ -226,3 +404,12 @@ class CustomPredictor(BasePredictor):
 
             # Finalize and clean up if necessary
             self.run_callbacks('on_predict_end')
+
+    def run_callbacks(self, event: str):
+        """Runs all registered callbacks for a specific event."""
+        for callback in self.callbacks.get(event, []):
+            callback(self)
+
+    def add_callback(self, event: str, func):
+        """Add callback."""
+        self.callbacks[event].append(func)
