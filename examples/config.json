@@ -1,0 +1,14 @@
+{
+  "websocket_settings": {
+    "host": "ws://localhost:9876/websocket"
+  },
+  "tactical_map_settings": {
+    "source_points": [[594, 0], [1202, 0], [10, 603], [1850, 603]],
+    "destination_points": [[61, 55], [666, 53], [62, 490], [664, 490]],
+    "image_path": "./layout.png"
+  },
+  "object_counter_settings": {
+    "line_coordinates": [[450, 0], [450, 600]],
+    "timezone": "Asia/Kolkata"
+  }
+}
