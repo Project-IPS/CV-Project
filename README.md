@@ -10,6 +10,8 @@ This project offers an advanced solution for real-time multi-object tracking, co
 - Generation of heatmaps to visualize object activity and movement patterns
 - Support for multiple tracking algorithms: DeepSORT, ByteTrack, and more
 
+  
+
 ## Table of Contents
 
 - [Introduction](#introduction)
@@ -60,7 +62,7 @@ nodemon index.js
 #### step 4: Run below bash snippet;
 
 ```bash
-python examples/track.py --yolo-model yolov8.pt --tracking-method deepocsort --source 0 --show
+python examples/track.py --yolo-model yolov8.pt --tracking-method botsort --source vid.mp4 --show
 ```
 
 ## Usage
