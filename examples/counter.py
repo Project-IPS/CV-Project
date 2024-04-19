@@ -77,7 +77,7 @@ class ObjectCounter:
     def draw_counters_on_image(self,plotted_img, counter):
         # Drawing a line and rectangles on the image
         cv2.line(plotted_img, self.line[0], self.line[1], (255, 0, 0), 3)
-        cv2.rectangle(plotted_img, (0, 0), (450, 438), (255, 0, 0), 3)
+        cv2.rectangle(plotted_img, (0, 0), (550, 438), (255, 0, 0), 3)
         cv2.rectangle(plotted_img, (0, 440), (1000, 500), (0, 0, 0), -1)
 
         # Initialize total counters

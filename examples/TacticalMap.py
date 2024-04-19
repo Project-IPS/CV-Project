@@ -25,7 +25,7 @@ class TacticalMap:
             if len(self.detected_labels_src_pts) > 3:
                 tac_map_copy = cv2.circle(tac_map_copy,                 ## Add tactical map people position color-coded annotation
                                           (int(person_pos[0]), int(person_pos[1])),
-                                          radius=20, color=(255, 0, 0), thickness=-1)
+                                          radius=20, color=(0, 0, 255), thickness=-1)
 
                 cv2.putText(tac_map_copy, str(int(person_id)), (int(person_pos[0]) - 8, int(person_pos[1]) + 8),  ## Add player id
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
@@ -47,7 +47,7 @@ class TacticalMap:
             pt = np.append(np.array(pt), np.array([1]), axis=0)
             dest_point = np.matmul(self.h, np.transpose(pt))
             dest_point = dest_point / dest_point[2]
-            person_id = bboxes_id[idx]
+            person_id = 0 if bboxes_id is None else bboxes_id[idx]
             self.pred_dst_pts[person_id] = list(np.transpose(dest_point)[:2])
 
         tac_map_copy = self.annotate_tactical_map()

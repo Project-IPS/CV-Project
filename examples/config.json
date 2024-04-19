@@ -3,12 +3,12 @@
     "host": "ws://localhost:9876/websocket"
   },
   "tactical_map_settings": {
-    "source_points": [[594, 0], [1202, 0], [10, 603], [1850, 603]],
-    "destination_points": [[61, 55], [666, 53], [62, 490], [664, 490]],
+    "source_points": [[171, 5], [1107, 10], [16, 400], [1270, 400]],
+    "destination_points": [[44, 59], [880, 58], [44, 440], [870, 440]],
     "image_path": "./layout.png"
   },
   "object_counter_settings": {
-    "line_coordinates": [[450, 0], [450, 600]],
+    "line_coordinates": [[550, 0], [550, 600]],
     "timezone": "Asia/Kolkata"
   }
 }

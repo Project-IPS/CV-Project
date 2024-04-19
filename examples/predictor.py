@@ -20,6 +20,9 @@ from datetime import datetime
 from examples.counter import ObjectCounter
 from examples.TacticalMap import TacticalMap
 from examples.WebSocket import WebSocket
+# Load JSON config
+with open('examples/config.json', 'r') as file:
+    config = json.load(file)
 
 # Create global instances
 counter = ObjectCounter()
@@ -34,7 +37,7 @@ class CustomPredictor(BasePredictor):
         global websocket
         global tactical_map
 
-        self.line = [(450, 0), (450, 600)]
+        self.line = config['object_counter_settings']['line_coordinates']
         self.cnt_str = None
         self.cnt_str1 = None
         self.inn = 0
@@ -129,7 +132,7 @@ class CustomPredictor(BasePredictor):
                     self.plotted_img = counter.draw_counters_on_image(self.plotted_img, counter)
 
                     # heatmap infernece
-                    self.plotted_img = self.heatmap_obj.generate_heatmap(self.plotted_img, self.results)
+                    # self.plotted_img = self.heatmap_obj.generate_heatmap(self.plotted_img, self.results)
 
                     #############################Tactical map############################################
 
